@@ -16,6 +16,8 @@ public class WindowSize : IComparable<WindowSize>
 
     public Point MaximizedPosition { get; set; } = new(0, 0);
 
+    public string? SavedDesktopId { get; set; }
+
     public bool AutoResize { get; set; }
 
     // AutoResize Delay Milliseconds

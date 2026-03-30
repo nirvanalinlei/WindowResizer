@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 using WindowResizer.Common.Exceptions;
@@ -67,11 +68,43 @@ public static class Resizer
         return NativeMethods.IsWindowVisible(hWnd);
     }
 
+    public static WindowVisibilityState GetWindowVisibilityState(IntPtr hWnd)
+    {
+        if (!IsWindowVisible(hWnd))
+        {
+            return WindowVisibilityState.Hidden;
+        }
+
+        return TryIsWindowCloaked(hWnd, out var isCloaked) && isCloaked
+            ? WindowVisibilityState.Cloaked
+            : WindowVisibilityState.Visible;
+    }
+
+    public static bool TryIsWindowCloaked(IntPtr hWnd, out bool isCloaked)
+    {
+        isCloaked = false;
+        var result = DwmGetWindowAttribute(hWnd, DwmaCloaked, out var cloaked, sizeof(int));
+        if (result != 0)
+        {
+            return false;
+        }
+
+        isCloaked = cloaked != 0;
+        return true;
+    }
+
     public static string? GetWindowTitle(IntPtr hWnd)
     {
         const int nChars = 256;
         var buff = new StringBuilder(nChars);
         return GetWindowText(hWnd, buff, nChars) > 0 ? buff.ToString() : null;
+    }
+
+    public static string? GetWindowClassName(IntPtr hWnd)
+    {
+        const int nChars = 256;
+        var buff = new StringBuilder(nChars);
+        return GetClassName(hWnd, buff, nChars) > 0 ? buff.ToString() : null;
     }
 
     public static void MaximizeWindow(IntPtr hWnd)
@@ -212,10 +245,21 @@ public static class Resizer
         var isSameMonitor = currentMonitor == targetMonitor;
         if (!isSameMonitor)
         {
-            SetWindowPlacement(hWnd, ref placement);
+            EnsureSetWindowPlacement(hWnd, ref placement);
         }
 
-        return SetWindowPlacement(hWnd, ref placement);
+        return EnsureSetWindowPlacement(hWnd, ref placement);
+    }
+
+    private static bool EnsureSetWindowPlacement(IntPtr hWnd, ref NativeMethods.WindowPlacement placement)
+    {
+        if (SetWindowPlacement(hWnd, ref placement))
+        {
+            return true;
+        }
+
+        var error = new Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+        throw new WindowResizerException($"SetWindowPlacement failed for {hWnd}: {error.Message}");
     }
 
     // ReSharper disable once UnusedMember.Local

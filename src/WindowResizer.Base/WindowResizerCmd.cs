@@ -44,9 +44,14 @@ public static class WindowResizerCmd
                 {
                     targets.Add(handler);
                 }
-                else if (!string.IsNullOrWhiteSpace(title) && t.Contains(title))
+                else
                 {
-                    targets.Add(handler);
+                    var windowTitle = t!;
+                    var titleFilter = title!;
+                    if (windowTitle.Contains(titleFilter))
+                    {
+                        targets.Add(handler);
+                    }
                 }
             }
         }
@@ -68,7 +73,18 @@ public static class WindowResizerCmd
     public static bool ResizeAll(string? configPath, string? profileName, Action<string>? onError)
     {
         var profile = LoadConfig(configPath, profileName, onError);
-        return profile is not null && ResizeAllWindow(profile, onError);
+        if (profile is null)
+        {
+            return false;
+        }
+
+        var result = RestoreWindowLayoutSnapshot(profile, null);
+        if (result.NoSnapshot)
+        {
+            onError?.Invoke("Current profile has no saved layout snapshot.");
+        }
+
+        return true;
     }
 
     private static Config? LoadConfig(string? configPath, string? profileName, Action<string>? onError)

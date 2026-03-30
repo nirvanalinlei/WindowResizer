@@ -11,7 +11,17 @@ namespace WindowResizer.Utils
 
         public static void Append(string message)
         {
-            File.AppendAllText(_logFile, $"[{DateTime.Now}]Error: {message}\n");
+            Write("Error", message);
+        }
+
+        public static void Info(string message)
+        {
+            Write("Info", message);
+        }
+
+        private static void Write(string level, string message)
+        {
+            File.AppendAllText(_logFile, $"[{DateTime.Now}]{level}: {message}\n");
 
             var file = new FileInfo(_logFile);
             if (file.Length > LogFileSize)

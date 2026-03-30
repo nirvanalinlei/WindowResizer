@@ -196,7 +196,9 @@ public static class ConfigFactory
         }
 
         config.DisableInFullScreen = c.DisableInFullScreen;
+        config.EnableVirtualDesktopRestore = c.EnableVirtualDesktopRestore;
         config.WindowSizes = c.WindowSizes;
+        config.CurrentLayoutSnapshot = c.CurrentLayoutSnapshot;
         config.CheckUpdate = c.CheckUpdate;
 
         config.Migrate(c);

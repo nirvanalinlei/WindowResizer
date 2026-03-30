@@ -4,6 +4,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using WindowResizer.Base;
+using WindowResizer.Base.Coordinators;
 using WindowResizer.Common.Windows;
 using WindowResizer.Configuration;
 using WindowResizer.Core.Shortcuts;
@@ -229,7 +231,7 @@ namespace WindowResizer
         {
             if (Resizer.IsWindowVisible(handle))
             {
-                ResizeWindow(handle, ConfigFactory.Current, null, null, true);
+                AutoRestoreWindow(handle, ConfigFactory.Current, null, null);
             }
         }
 
@@ -388,20 +390,15 @@ namespace WindowResizer
 
         private void SaveAll()
         {
-            var windows = Resizer.GetOpenWindows();
-            foreach (var window in windows)
-            {
-                if (Resizer.GetWindowState(window) != WindowState.Minimized)
-                {
-                    UpdateOrSaveWindowSize(window, ConfigFactory.Current, null);
-                }
-            }
+            var result = SaveWindowLayoutSnapshot(ConfigFactory.Current, null);
+            _settingForm?.RefreshSnapshotStatus();
+            Log.Info(LayoutSnapshotOperationFormatter.FormatSaveLog(result));
 
             if (ConfigFactory.Current.NotifyOnSaved)
             {
                 Toast.ShowToast(
-                    title: "Config Saved",
-                    message: "Current processes saved.",
+                    title: "Layout Saved",
+                    message: LayoutSnapshotOperationFormatter.FormatSaveSummary(result),
                     tray: _trayIcon,
                     actionLevel: Toast.ActionLevel.Success,
                     actionType: Toast.ActionType.OpenProcessSetting);
@@ -411,7 +408,26 @@ namespace WindowResizer
 
         private void RestoreAll()
         {
-            ResizeAllWindow(ConfigFactory.Current, null);
+            var result = RestoreWindowLayoutSnapshot(ConfigFactory.Current, null);
+            if (result.NoSnapshot)
+            {
+                Log.Info("RestoreAll skipped: current profile has no saved layout snapshot.");
+                Toast.ShowToast(
+                    title: "No Layout Snapshot",
+                    message: "Current profile has no saved layout snapshot.",
+                    actionLevel: Toast.ActionLevel.Info,
+                    tray: _trayIcon,
+                    expired: 2000);
+                return;
+            }
+
+            Log.Info(LayoutSnapshotOperationFormatter.FormatRestoreLog(result));
+            Toast.ShowToast(
+                title: "Layout Restored",
+                message: LayoutSnapshotOperationFormatter.FormatRestoreSummary(result),
+                actionLevel: result.FailedCount > 0 ? Toast.ActionLevel.Warning : Toast.ActionLevel.Success,
+                tray: _trayIcon,
+                expired: result.FailedCount > 0 ? 7000 : 3000);
         }
 
         #endregion

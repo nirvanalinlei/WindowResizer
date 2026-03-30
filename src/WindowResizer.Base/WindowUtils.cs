@@ -1,363 +1,151 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
+using WindowResizer.Base.Coordinators;
+using WindowResizer.Base.Services;
 using WindowResizer.Common.Shortcuts;
 using WindowResizer.Common.Windows;
 using WindowResizer.Configuration;
+using WindowResizer.Core.VirtualDesktop;
 using WindowResizer.Core.WindowControl;
 
 namespace WindowResizer.Base;
 
 public static class WindowUtils
 {
-    /// <summary>
-    ///     Resize window
-    /// </summary>
-    /// <param name="handle"></param>
-    /// <param name="config"></param>
-    /// <param name="onFailed"></param>
-    /// <param name="onConfigNoMatch"></param>
-    /// <param name="onlyAuto"></param>
-    public static void ResizeWindow(
+    public static WindowRestoreResult ResizeWindow(
         IntPtr handle,
         Config config,
         Action<Process, Exception>? onFailed,
         Action<string, string>? onConfigNoMatch,
-        bool onlyAuto = false)
+        bool onlyAuto = false,
+        bool allowVirtualDesktopMove = true)
     {
-        if (!IsProcessAvailable(handle, out string processName, onFailed))
-        {
-            return;
-        }
+        return CreateRuleRestoreCoordinator().RestoreWindow(
+            handle,
+            config,
+            onFailed,
+            onConfigNoMatch,
+            onlyAuto,
+            allowVirtualDesktopMove);
+    }
 
-        if (string.IsNullOrWhiteSpace(processName)) return;
-
-        // add delay to get window title on auto resizing
-        if (config.EnableAutoResizeDelay && onlyAuto)
-        {
-            var autoWindow = config.WindowSizes.FirstOrDefault(w => w.Name.Equals(processName, StringComparison.OrdinalIgnoreCase));
-            if (autoWindow is null)
-            {
-                return;
-            }
-
-            if (autoWindow.AutoResizeDelay > 0)
-            {
-                Thread.Sleep(autoWindow.AutoResizeDelay);
-            }
-        }
-
-        var windowTitle = Resizer.GetWindowTitle(handle) ?? string.Empty;
-        var match = GetMatchWindowSize(config.WindowSizes, processName, windowTitle, config.EnableResizeByTitle, onlyAuto);
-        if (!match.NoMatch)
-        {
-            MoveMatchWindow(match, handle);
-        }
-        else
-        {
-            onConfigNoMatch?.Invoke(processName, windowTitle);
-        }
+    public static void AutoRestoreWindow(
+        IntPtr handle,
+        Config config,
+        Action<Process, Exception>? onFailed,
+        Action<string, string>? onConfigNoMatch)
+    {
+        CreateAutoRestoreCoordinator().RestoreWindow(handle, config, onFailed, onConfigNoMatch);
     }
 
     public static bool ResizeAllWindow(Config profile, Action<string>? onError)
     {
-        var windows = Resizer.GetOpenWindows();
-        windows.Reverse();
-        foreach (var window in windows)
+        var result = RestoreWindowLayoutSnapshot(profile, null);
+        if (result.NoSnapshot)
         {
-            if (!profile.RestoreAllIncludeMinimized && Resizer.GetWindowState(window) == WindowState.Minimized)
-            {
-                continue;
-            }
-
-            ResizeWindow(window, profile, null, null);
+            onError?.Invoke("Current profile has no saved layout snapshot.");
         }
 
         return true;
     }
 
-    /// <summary>
-    ///     Update or save window size
-    /// </summary>
-    /// <param name="handle"></param>
-    /// <param name="config"></param>
-    /// <param name="onFailed"></param>
-    /// <param name="onSuccess"></param>
     public static void UpdateOrSaveWindowSize(
         IntPtr handle,
         Config config,
         Action<Process, Exception>? onFailed,
-        Action<string>? onSuccess = null)
+        Action<string>? onSuccess = null,
+        bool allowVirtualDesktopCapture = true)
     {
-        if (!IsProcessAvailable(handle, out string processName, onFailed))
-        {
-            return;
-        }
+        CreateRuleSaveCoordinator().SaveWindow(handle, config, onFailed, onSuccess, allowVirtualDesktopCapture);
+    }
 
-        var windowTitle = Resizer.GetWindowTitle(handle);
-        var match = GetMatchWindowSize(config.WindowSizes, processName, windowTitle, config.EnableResizeByTitle);
+    public static LayoutSnapshotSaveResult SaveWindowLayoutSnapshot(
+        Config config,
+        Action<Process, Exception>? onFailed)
+    {
+        return CreateLayoutSnapshotSaveCoordinator().SaveAll(config, onFailed);
+    }
 
-        var place = Resizer.GetPlacement(handle);
-        UpdateOrSaveConfig(match, processName, windowTitle, place, config.EnableResizeByTitle);
-        onSuccess?.Invoke(processName);
+    public static LayoutSnapshotRestoreResult RestoreWindowLayoutSnapshot(
+        Config config,
+        Action<Process, Exception>? onFailed)
+    {
+        return CreateLayoutSnapshotRestoreCoordinator().RestoreAll(config, onFailed);
     }
 
     public static bool IsProcessAvailable(IntPtr handle, out string processName, Action<Process, Exception>? onFailed)
     {
-        processName = string.Empty;
-        if (Resizer.IsChildWindow(handle))
-        {
-            return false;
-        }
-
-        var process = Resizer.GetRealProcess(handle);
-        if (process is null)
-        {
-            return false;
-        }
-
-        var success = TryGetProcessName(process, out processName, onFailed);
-        if (!success)
-        {
-            return false;
-        }
-
-        return !Resizer.IsInvisibleProcess(processName);
+        return WindowProcessNameResolver.TryGetProcessName(
+            handle,
+            Resizer.IsChildWindow,
+            Resizer.GetRealProcess,
+            process => process.MainModule?.ModuleName ?? string.Empty,
+            process => process.ProcessName,
+            Resizer.IsInvisibleProcess,
+            onFailed,
+            out _,
+            out processName);
     }
 
     public static Hotkeys? GetKeys(HotkeysType type) =>
         ConfigFactory.Current.GetKeys(type);
 
-    #region private functions
-
-    private static void MoveMatchWindow(MatchWindowSize match, IntPtr handle)
+    private static RuleSaveCoordinator CreateRuleSaveCoordinator()
     {
-        if (match.FullMatch != null)
-        {
-            MoveWindow(handle, match.FullMatch);
-            return;
-        }
-
-        if (match.PrefixMatch != null)
-        {
-            MoveWindow(handle, match.PrefixMatch);
-            return;
-        }
-
-        if (match.SuffixMatch != null)
-        {
-            MoveWindow(handle, match.SuffixMatch);
-            return;
-        }
-
-        if (match.WildcardMatch != null)
-        {
-            MoveWindow(handle, match.WildcardMatch);
-        }
+        var matcher = new WindowRuleMatcher();
+        return new RuleSaveCoordinator(
+            new WindowContextService(),
+            new WindowPlacementService(),
+            new ConfigurationStore(),
+            CreateVirtualDesktopService(),
+            matcher,
+            new WindowRuleUpdater(matcher));
     }
 
-    private static bool TryGetProcessName(Process process, out string processName, Action<Process, Exception>? onFailed)
+    private static RuleRestoreCoordinator CreateRuleRestoreCoordinator()
     {
-        try
-        {
-            processName = process.MainModule?.ModuleName ?? string.Empty;
-            return true;
-        }
-        catch (Exception e)
-        {
-            onFailed?.Invoke(process, e);
-            processName = string.Empty;
-            return false;
-        }
+        var matcher = new WindowRuleMatcher();
+        return new RuleRestoreCoordinator(
+            new WindowContextService(),
+            new WindowPlacementService(),
+            CreateVirtualDesktopService(),
+            matcher);
     }
 
-    private static MatchWindowSize GetMatchWindowSize(
-        IEnumerable<WindowSize> windowSizes,
-        string processName,
-        string? title,
-        bool enableResizeByTitle,
-        bool onlyAuto = false)
+    private static AutoRestoreCoordinator CreateAutoRestoreCoordinator()
     {
-        var windows = windowSizes.Where(w =>
-                                     w.Name.Equals(processName, StringComparison.OrdinalIgnoreCase))
-                                 .ToList();
-
-        if (!enableResizeByTitle)
-        {
-            windows = windows.Where(w => w.Title.Equals("*")).ToList();
-
-            if (onlyAuto)
-            {
-                windows = windows.Where(w => w.AutoResize).ToList();
-            }
-
-            return new MatchWindowSize
-            {
-                WildcardMatch = windows.FirstOrDefault()
-            };
-        }
-
-        if (onlyAuto)
-        {
-            windows = windows.Where(w => w.AutoResize).ToList();
-        }
-
-        if (string.IsNullOrEmpty(title))
-        {
-            title = "*";
-        }
-
-        return new MatchWindowSize
-        {
-            FullMatch = windows.FirstOrDefault(w => w.Title == title),
-            PrefixMatch = windows.FirstOrDefault(w =>
-                w.Title.StartsWith("*") && w.Title.Length > 1 && title!.EndsWith(w.Title.TrimStart('*'))),
-            SuffixMatch = windows.FirstOrDefault(w =>
-                w.Title.EndsWith("*") && w.Title.Length > 1 && title!.StartsWith(w.Title.TrimEnd('*'))),
-            WildcardMatch = windows.FirstOrDefault(w => w.Title.Equals("*"))
-        };
+        var matcher = new WindowRuleMatcher();
+        return new AutoRestoreCoordinator(
+            new WindowContextService(),
+            new WindowWaitService(),
+            new RuleRestoreCoordinator(
+                new WindowContextService(),
+                new WindowPlacementService(),
+                CreateVirtualDesktopService(),
+                matcher));
     }
 
-
-    private static void UpdateOrSaveConfig(MatchWindowSize match, string processName, string? title, WindowPlacement placement, bool enableResizeByTitle)
+    private static LayoutSnapshotSaveCoordinator CreateLayoutSnapshotSaveCoordinator()
     {
-        if (string.IsNullOrWhiteSpace(processName)) return;
-
-        if (!enableResizeByTitle)
-        {
-            if (match.NoMatch || match.WildcardMatch is null)
-            {
-                InsertOrder(new WindowSize
-                {
-                    Name = processName,
-                    Title = "*",
-                    Rect = placement.Rect,
-                    State = placement.WindowState,
-                    MaximizedPosition = placement.MaximizedPosition,
-                });
-            }
-            else
-            {
-                match.WildcardMatch.Rect = placement.Rect;
-                match.WildcardMatch.State = placement.WindowState;
-                match.WildcardMatch.MaximizedPosition = placement.MaximizedPosition;
-            }
-
-            ConfigFactory.Save();
-            return;
-        }
-
-        if (match.NoMatch)
-        {
-            // Add a wildcard match for all titles
-            InsertOrder(new WindowSize
-            {
-                Name = processName,
-                Title = "*",
-                Rect = placement.Rect,
-                State = placement.WindowState,
-                MaximizedPosition = placement.MaximizedPosition,
-            });
-
-            if (!string.IsNullOrWhiteSpace(title))
-            {
-                InsertOrder(new WindowSize
-                {
-                    Name = processName,
-                    Title = title!,
-                    Rect = placement.Rect,
-                    State = placement.WindowState,
-                    MaximizedPosition = placement.MaximizedPosition,
-                });
-            }
-
-            ConfigFactory.Save();
-            return;
-        }
-
-        if (match.FullMatch != null)
-        {
-            match.FullMatch.Rect = placement.Rect;
-            match.FullMatch.State = placement.WindowState;
-            match.FullMatch.MaximizedPosition = placement.MaximizedPosition;
-        }
-        else if (!string.IsNullOrWhiteSpace(title))
-        {
-            // update auto resize delay for new entry
-            var delay = match.All.FirstOrDefault(i => i is { AutoResizeDelay: > 0 })?.AutoResizeDelay ?? 0;
-
-            InsertOrder(new WindowSize
-            {
-                Name = processName,
-                Title = title!,
-                Rect = placement.Rect,
-                State = placement.WindowState,
-                MaximizedPosition = placement.MaximizedPosition,
-                AutoResizeDelay = delay
-            });
-        }
-
-        if (match.SuffixMatch != null)
-        {
-            match.SuffixMatch.Rect = placement.Rect;
-            match.SuffixMatch.State = placement.WindowState;
-            match.SuffixMatch.MaximizedPosition = placement.MaximizedPosition;
-        }
-
-        if (match.PrefixMatch != null)
-        {
-            match.PrefixMatch.Rect = placement.Rect;
-            match.PrefixMatch.State = placement.WindowState;
-            match.PrefixMatch.MaximizedPosition = placement.MaximizedPosition;
-        }
-
-        if (match.WildcardMatch != null)
-        {
-            match.WildcardMatch.Rect = placement.Rect;
-            match.WildcardMatch.State = placement.WindowState;
-            match.WildcardMatch.MaximizedPosition = placement.MaximizedPosition;
-        }
-        else
-        {
-            InsertOrder(new WindowSize
-            {
-                Name = processName,
-                Title = "*",
-                Rect = placement.Rect,
-                State = placement.WindowState,
-                MaximizedPosition = placement.MaximizedPosition,
-            });
-        }
-
-        ConfigFactory.Save();
+        return new LayoutSnapshotSaveCoordinator(
+            new WindowContextService(),
+            new WindowPlacementService(),
+            new ConfigurationStore(),
+            CreateVirtualDesktopService());
     }
 
-    private static void MoveWindow(IntPtr handle, WindowSize match)
+    private static LayoutSnapshotRestoreCoordinator CreateLayoutSnapshotRestoreCoordinator()
     {
-        Resizer.SetPlacement(handle, match.Rect, match.MaximizedPosition, match.State);
+        return new LayoutSnapshotRestoreCoordinator(
+            new WindowContextService(),
+            new WindowPlacementService(),
+            CreateVirtualDesktopService());
     }
 
-/*
-        private static void MoveWindow(IntPtr handle, WindowSize match)
-        {
-            Resizer.MoveWindow(handle, match.Rect);
-            if (match.State == WindowState.Maximized)
-            {
-                Resizer.MaximizeWindow(handle);
-            }
-        }
-*/
-
-    private static void InsertOrder(WindowSize item)
+    private static IVirtualDesktopService CreateVirtualDesktopService()
     {
-        var list = ConfigFactory.Current.WindowSizes;
-        var backing = list.ToList();
-        backing.Add(item);
-        var index = backing.OrderBy(l => l.Name).ThenBy(l => l.Title).ToList().IndexOf(item);
-        list.Insert(index, item);
+        return VirtualDesktopServiceFactory.Create();
     }
-
-    #endregion
 }

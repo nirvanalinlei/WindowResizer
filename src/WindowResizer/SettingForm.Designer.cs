@@ -41,6 +41,8 @@ namespace WindowResizer
             this.SettingTab = new System.Windows.Forms.TabControl();
             this.HotkeysPage = new System.Windows.Forms.TabPage();
             this.globalConfigGroup = new System.Windows.Forms.GroupBox();
+            this.LayoutSnapshotStatusLabel = new System.Windows.Forms.Label();
+            this.VirtualDesktopRestoreCheckBox = new System.Windows.Forms.CheckBox();
             this.AutoResizeDelayCheckbox = new System.Windows.Forms.CheckBox();
             this.ResizeByTitleCheckbox = new System.Windows.Forms.CheckBox();
             this.DisableInFullScreenCheckBox = new System.Windows.Forms.CheckBox();
@@ -211,6 +213,8 @@ namespace WindowResizer
             // 
             // globalConfigGroup
             // 
+            this.globalConfigGroup.Controls.Add(this.LayoutSnapshotStatusLabel);
+            this.globalConfigGroup.Controls.Add(this.VirtualDesktopRestoreCheckBox);
             this.globalConfigGroup.Controls.Add(this.AutoResizeDelayCheckbox);
             this.globalConfigGroup.Controls.Add(this.ResizeByTitleCheckbox);
             this.globalConfigGroup.Controls.Add(this.DisableInFullScreenCheckBox);
@@ -220,6 +224,31 @@ namespace WindowResizer
             this.globalConfigGroup.TabIndex = 17;
             this.globalConfigGroup.TabStop = false;
             this.globalConfigGroup.Text = "Global Config";
+            // 
+            // LayoutSnapshotStatusLabel
+            // 
+            this.LayoutSnapshotStatusLabel.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.LayoutSnapshotStatusLabel.Location = new System.Drawing.Point(35, 145);
+            this.LayoutSnapshotStatusLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.LayoutSnapshotStatusLabel.Name = "LayoutSnapshotStatusLabel";
+            this.LayoutSnapshotStatusLabel.Size = new System.Drawing.Size(760, 16);
+            this.LayoutSnapshotStatusLabel.TabIndex = 10;
+            this.LayoutSnapshotStatusLabel.Text = "Last layout snapshot: not saved yet.";
+            this.LayoutSnapshotStatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // VirtualDesktopRestoreCheckBox
+            // 
+            this.VirtualDesktopRestoreCheckBox.AutoSize = true;
+            this.VirtualDesktopRestoreCheckBox.BackColor = System.Drawing.SystemColors.Window;
+            this.VirtualDesktopRestoreCheckBox.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.VirtualDesktopRestoreCheckBox.Location = new System.Drawing.Point(376, 117);
+            this.VirtualDesktopRestoreCheckBox.Margin = new System.Windows.Forms.Padding(2);
+            this.VirtualDesktopRestoreCheckBox.Name = "VirtualDesktopRestoreCheckBox";
+            this.VirtualDesktopRestoreCheckBox.Size = new System.Drawing.Size(182, 20);
+            this.VirtualDesktopRestoreCheckBox.TabIndex = 9;
+            this.VirtualDesktopRestoreCheckBox.TabStop = false;
+            this.VirtualDesktopRestoreCheckBox.Text = "Virtual Desktop Restore";
+            this.VirtualDesktopRestoreCheckBox.UseVisualStyleBackColor = false;
             // 
             // AutoResizeDelayCheckbox
             // 
@@ -641,5 +670,7 @@ namespace WindowResizer
         private System.Windows.Forms.CheckBox ResizeByTitleCheckbox;
         private System.Windows.Forms.GroupBox globalConfigGroup;
         private System.Windows.Forms.CheckBox AutoResizeDelayCheckbox;
+        private System.Windows.Forms.CheckBox VirtualDesktopRestoreCheckBox;
+        private System.Windows.Forms.Label LayoutSnapshotStatusLabel;
     }
 }

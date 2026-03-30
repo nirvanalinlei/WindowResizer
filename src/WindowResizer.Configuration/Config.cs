@@ -22,11 +22,15 @@ public class Config
 
     public bool EnableAutoResizeDelay { get; set; } = false;
 
+    public bool EnableVirtualDesktopRestore { get; set; } = false;
+
     public bool CheckUpdate { get; set; } = true;
 
     public Dictionary<HotkeysType, Hotkeys> Keys { get; } = new();
 
     public BindingList<WindowSize> WindowSizes { get; set; } = new();
+
+    public WindowLayoutSnapshot? CurrentLayoutSnapshot { get; set; }
 
     public BindingList<WindowSize> GetWindowSizes()
     {

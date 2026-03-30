@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using WindowResizer.Base.Coordinators;
 using WindowResizer.Configuration;
 using WindowResizer.Core.WindowControl;
 using static WindowResizer.Base.WindowUtils;
@@ -52,7 +53,7 @@ public static class WindowCmd
 
         foreach (var tp in targets)
         {
-            ResizeWindow(tp.Handle, profile, (p, e) =>
+            var restoreResult = ResizeWindow(tp.Handle, profile, (p, e) =>
             {
                 tp.Result = "Elevated privileges may be required.";
                 if (!resizeAllProcesses)
@@ -68,6 +69,14 @@ public static class WindowCmd
                     onError?.Invoke($"No saved settings for <{p} :: {t}>.");
                 }
             });
+
+            tp.MatchedRuleTitle = restoreResult.MatchedRuleTitle;
+            tp.Restored = restoreResult.PlacementRestored;
+            tp.VirtualDesktopMoveStatus = restoreResult.VirtualDesktopMoveStatus;
+            if (string.IsNullOrWhiteSpace(tp.Result))
+            {
+                tp.Result = CombineMessages(restoreResult.VirtualDesktopMoveErrorMessage, restoreResult.ErrorMessage);
+            }
         }
 
         onDebug?.Invoke(targets);
@@ -90,7 +99,28 @@ public static class WindowCmd
 
         public string? Title { get; }
 
+        public string? MatchedRuleTitle { get; set; }
+
+        public bool Restored { get; set; }
+
+        public VirtualDesktopMoveStatus VirtualDesktopMoveStatus { get; set; } = VirtualDesktopMoveStatus.NotApplicable;
+
         public string Result { get; set; } = string.Empty;
+    }
+
+    private static string CombineMessages(string? desktopMoveError, string? restoreError)
+    {
+        if (string.IsNullOrWhiteSpace(desktopMoveError))
+        {
+            return restoreError ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(restoreError))
+        {
+            return desktopMoveError!;
+        }
+
+        return $"{desktopMoveError}; {restoreError}";
     }
 
     private static Config? LoadConfig(string? configPath, string? profileName, Action<string>? onError)

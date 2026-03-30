@@ -48,11 +48,17 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern int GetWindowTextLength(IntPtr hWnd);
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    internal static extern int GetClassName(IntPtr hWnd, StringBuilder className, int maxCount);
+
     [DllImport("user32.dll")]
     internal static extern bool IsWindowVisible(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     internal static extern IntPtr GetShellWindow();
+
+    [DllImport("dwmapi.dll")]
+    internal static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
     [DllImport("user32.dll", ExactSpelling = true, CharSet = CharSet.Auto)]
     internal static extern IntPtr GetParent(IntPtr hWnd);
@@ -90,6 +96,8 @@ internal static class NativeMethods
         ShowDefault = 10,
         ForceMinimize = 11
     }
+
+    internal const int DwmaCloaked = 14;
 
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]

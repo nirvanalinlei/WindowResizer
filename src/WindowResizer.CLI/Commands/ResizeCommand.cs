@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Spectre.Console;
 using WindowResizer.Base;
+using WindowResizer.Base.Coordinators;
 using WindowResizer.CLI.Utils;
 
 namespace WindowResizer.CLI.Commands
@@ -50,17 +51,39 @@ namespace WindowResizer.CLI.Commands
             table.AddColumn(new TableColumn("Handle"));
             table.AddColumn(new TableColumn("Process"));
             table.AddColumn(new TableColumn("Title"));
-            table.AddColumn(new TableColumn("Success").Centered());
+            table.AddColumn(new TableColumn("Rule"));
+            table.AddColumn(new TableColumn("Desktop").Centered());
+            table.AddColumn(new TableColumn("Restored").Centered());
             table.AddColumn(new TableColumn("Error"));
             foreach (var item in lists)
             {
-                var result = string.IsNullOrEmpty(item.Result) ? "[green]Y[/]" : "[red]N[/]";
-                table.AddRow(item.Handle.ToString(), $"[green]{item.ProcessName}[/]", item.Title ?? string.Empty, result, $"[red]{item.Result}[/]");
+                var restored = item.Restored ? "[green]Y[/]" : "[red]N[/]";
+                table.AddRow(
+                    item.Handle.ToString(),
+                    $"[green]{item.ProcessName}[/]",
+                    item.Title ?? string.Empty,
+                    item.MatchedRuleTitle ?? "[grey]-[/]",
+                    GetDesktopMoveText(item.VirtualDesktopMoveStatus),
+                    restored,
+                    $"[red]{item.Result}[/]");
             }
 
             table.Border(TableBorder.Square);
             table.Alignment(Justify.Left);
             AnsiConsole.Write(table);
+        }
+
+        private static string GetDesktopMoveText(VirtualDesktopMoveStatus status)
+        {
+            switch (status)
+            {
+                case VirtualDesktopMoveStatus.Moved:
+                    return "[green]Moved[/]";
+                case VirtualDesktopMoveStatus.Fallback:
+                    return "[yellow]Fallback[/]";
+                default:
+                    return "[grey]N/A[/]";
+            }
         }
     }
 }

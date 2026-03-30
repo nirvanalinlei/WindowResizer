@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using WindowResizer.Base;
 using WindowResizer.Common.Shortcuts;
 using WindowResizer.Configuration;
 using WindowResizer.Core.Shortcuts;
@@ -85,6 +86,12 @@ namespace WindowResizer
             AutoResizeDelayCheckbox.Checked = ConfigFactory.Current.EnableAutoResizeDelay;
             AutoResizeDelayCheckbox.CheckedChanged += AutoResizeDelay_CheckedChanged;
             Helper.SetToolTip(AutoResizeDelayCheckbox, "Turn On/Off auto resize delay.");
+
+            VirtualDesktopRestoreCheckBox.Checked = ConfigFactory.Current.EnableVirtualDesktopRestore;
+            VirtualDesktopRestoreCheckBox.CheckedChanged += VirtualDesktopRestore_CheckedChanged;
+            Helper.SetToolTip(VirtualDesktopRestoreCheckBox, "Allow manual restore and Restore All to move windows across virtual desktops.");
+
+            RefreshSnapshotStatus();
         }
 
         private void DisableInFullScreen_CheckedChanged(object sender, EventArgs e)
@@ -122,6 +129,17 @@ namespace WindowResizer
             ProcessesGrid_UpdateDataSource();
         }
 
+        private void VirtualDesktopRestore_CheckedChanged(object sender, EventArgs e)
+        {
+            ConfigFactory.Current.EnableVirtualDesktopRestore = VirtualDesktopRestoreCheckBox.Checked;
+            ConfigFactory.Save();
+        }
+
+        public void RefreshSnapshotStatus()
+        {
+            LayoutSnapshotStatusLabel.Text = LayoutSnapshotStatusFormatter.Format(ConfigFactory.Current.CurrentLayoutSnapshot);
+        }
+
         #endregion
 
         private void HotkeysPageReload()
@@ -140,6 +158,8 @@ namespace WindowResizer
             }
 
             DisableInFullScreenCheckBox.Checked = ConfigFactory.Current.DisableInFullScreen;
+            VirtualDesktopRestoreCheckBox.Checked = ConfigFactory.Current.EnableVirtualDesktopRestore;
+            RefreshSnapshotStatus();
         }
 
         private void Stop_Recording(object sender, EventArgs e)
