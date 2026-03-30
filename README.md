@@ -1,136 +1,107 @@
 # WindowResizer
 
-[![WindowResizer](https://github.com/caoyue/WindowResizer/actions/workflows/WindowsResizer.yml/badge.svg)](https://github.com/caoyue/WindowResizer/actions) [![GitHub all releases](https://img.shields.io/github/downloads/caoyue/WindowResizer/total)](https://github.com/caoyue/WindowResizer/releases)  [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/caoyue/WindowResizer?sort=semver)](https://github.com/caoyue/WindowResizer/releases/latest)
+[![WindowResizer](https://github.com/nirvanalinlei/WindowResizer/actions/workflows/WindowResizer.yml/badge.svg)](https://github.com/nirvanalinlei/WindowResizer/actions/workflows/WindowResizer.yml) [![GitHub all releases](https://img.shields.io/github/downloads/nirvanalinlei/WindowResizer/total)](https://github.com/nirvanalinlei/WindowResizer/releases) [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nirvanalinlei/WindowResizer?sort=semver)](https://github.com/nirvanalinlei/WindowResizer/releases/latest)
 
-WindowResizer is a simple tool that gives you a way to use hotkeys to quickly save and restore different window positions and sizes.
+WindowResizer saves and restores window positions with hotkeys, including full layout snapshots across multiple monitors and virtual desktops.
 
-## Download
-- Github Release
-    > <https://github.com/caoyue/WindowResizer/releases/latest>
+WindowResizer 用快捷键保存和恢复窗口位置，也支持跨多显示器与多虚拟桌面的整套布局快照。
 
-    require:
-    -   Windows 7+ (x64)
-    -   .NET Framework 4.7.2+
+## English
 
-- Microsoft Store
-    > [<img src="https://raw.githubusercontent.com/caoyue/WindowResizer/package/.github/assets/microsoft-store-badge.png" width="160" title="Get WindowResizer from Microsoft Store" alt="Get WindowResizer from Microsoft Store">](https://www.microsoft.com/store/apps/9NZ07CQ6WZMB)
-    
-    The Windows Store version has the same features as the GitHub release version.  
-    You can support development by purchasing it on the Windows Store.
+### Features
+- Save and restore the foreground window.
+- Use tray `Save All` / `Restore All` to capture and replay a full layout snapshot.
+- Optional `Virtual Desktop Restore` will try to move matched windows back to their saved virtual desktops when Windows provides the required support.
+- `Restore All` can include minimized windows.
+- Snapshot matching is more resilient for dynamic titles, including numbered windows such as `Chart #1`.
 
-## App
-### hotkeys
+### Download
+- GitHub Releases: <https://github.com/nirvanalinlei/WindowResizer/releases/latest>
+- Microsoft Store: <https://www.microsoft.com/store/apps/9NZ07CQ6WZMB>
+- Runtime for packaged binaries: Windows x64 and .NET Framework 4.7.2 or later.
 
-Change hotkeys in setting window.
+### Quick Start
+1. Run `WindowResizer.exe`.
+2. Use `Ctrl+Alt+S` to save the foreground window and `Ctrl+Alt+R` to restore it.
+3. Open the settings window to change hotkeys and toggle `Resize by title`, `Auto Resize Delay`, `Include Minimized`, or `Virtual Desktop Restore`.
+4. Use tray `Save All` to save the current layout snapshot. Use tray `Restore All` to replay the last saved snapshot.
+5. For portable mode, keep `WindowResizer.config.json` beside `WindowResizer.exe`.
 
--   save window position
+### Restore All Summary
+- `Restored`: placement was applied successfully.
+- `Move fallback`: the window could not be moved to the saved virtual desktop, so placement was still attempted on the current desktop.
+- `Unmatched`: no live window matched a saved snapshot entry.
+- `Failed`: a matching window was found, but Windows or the target app refused the placement change.
 
-    default hotkey: `ctrl+alt+s`
+### CLI
+Run `WindowResizer.CLI.exe resize -h`.
 
--   save all opened window position
-
--   restore window position
-
-    default hotkey: `ctrl+alt+r`
-
-    <details>
-        <summary>demo</summary>
-        <img src="https://i.imgur.com/5TJdL44.gif" title="restore" loading="lazy" />
-    </details>
-
-
--   restore all opened window position
-    <details>
-        <summary>demo</summary>
-        <img src="https://i.imgur.com/3558lKS.gif" title="restore all" loading="lazy" />
-    </details>
-    
-
-### usage
-
--   how to add an config entry
-
-    Focus on the window (eg. Chrome), then press the save window hotkey (`ctrl+alt+s`by default), an entry will be added to the configuration file.
-
--   How does the window matching work?
-
-    The process name is matched first.
-    The title is not required, by default use a wildcard `*` to match all the titles for a process name.
-    And if you specify the title, it will be matched first.
-
--  Option: Resize by title
-    Uncheck: Resize based on process
-    Checked: Resize based on Process and title
-
--   `Auto resize`: restore window position automatically
-
-    check the checkbox on `Auto` column.
-    <details>
-        <summary>demo</summary>
-        <img src="https://i.imgur.com/LeNyJQu.gif" title="auto restore" loading="lazy" />
-    </details>
-
--  Option: Auto resize delay
-    This option is used with the `Auto Resize` feature.
-    When `Auto Resize` based on process titles, some titles are not immediately determined, such as Chrome web pages.
-    If this option is checked, you can set a delay(in millisecond) for the Chrome process, so when a new Chrome window is created, there will be a delay before resize takes effect.
-
--   portable mode
-    - download portable package
-    - put `WindowResizer.config.json` in the same folder as the program file `WindowResizer.exe`
-## CLI
-run ```WindowResizer.CLI.exe resize -h```   
-> The CLI can run standalone without WindowResizer App running.
-
-```
- __        __  _               _                      ____                 _
- \ \      / / (_)  _ __     __| |   ___   __      __ |  _ \    ___   ___  (_)  ____   ___   _ __
-  \ \ /\ / /  | | | '_ \   / _` |  / _ \  \ \ /\ / / | |_) |  / _ \ / __| | | |_  /  / _ \ | '__|
-   \ V  V /   | | | | | | | (_| | | (_) |  \ V  V /  |  _ <  |  __/ \__ \ | |  / /  |  __/ | |
-    \_/\_/    |_| |_| |_|  \__,_|  \___/    \_/\_/   |_| \_\  \___| |___/ |_| /___|  \___| |_|
-
-
-Usage:
-  WindowResizer.CLI resize [options]
-
-Options:
-  -c, --config <config>    Config file path, use current config file if omitted.
-  -P, --profile <profile>  Profile name, use current profile if omitted.
-  -p, --process <process>  Process name, use foreground process if omitted.
-  -t, --title <title>      Process title, all windows of the process will be resized if not specified.
-  -v, --verbose            Show more details.
-  -?, -h, --help           Show help and usage information
-```
-
-e.g.,
- 
-```shell
-# Resize all
+```powershell
 WindowResizer.CLI.exe resize
-
-# Specify config file and profile
-WindowResizer.CLI.exe resize -c "X:\WindowResizer.config.json" -P "my-profile"
-
-# Show verbose
-WindowResizer.CLI.exe resize -v
-
-# Filter windows by process
 WindowResizer.CLI.exe resize -p "notepad.exe"
-
-# Filter windows by title regex
-WindowResizer.CLI.exe resize -t ".*.txt" 
-
-# Combine all options
-WindowResizer.CLI.exe resize -c "X:\WindowResizer.config.json" -P "my-profile" -p "notepad.exe" -t ".*.txt" -v
+WindowResizer.CLI.exe resize -p "notepad.exe" -t "notes" -v
 ```
 
+When `--process` is omitted, the CLI resizes the foreground window. When `--process` is provided, `--title` works as a substring filter instead of a regex.
 
-## Build
-- .NET Framework 4.7.2
-- Visual Studio 2019/2022 or JetBrains Rider
-- Projects
-  - WindowResizer: the GUI app
-  - WindowResizer.CLI: the CLI app
+The CLI works without the tray app already running.
 
-## Stats
-![Alt](https://repobeats.axiom.co/api/embed/75ddcde135edf6e28a84cbe8c5fbe2b029f73c8e.svg "Repobeats analytics image")
+### Build
+```powershell
+dotnet restore
+dotnet build WindowResizer.sln -c Release
+pwsh .\installer\build.ps1 1.3.3
+pwsh .\installer\build-cli.ps1 1.3.3
+```
+
+Release packaging also requires `nuget`, `7z`, and the local Squirrel tool restored from the `squirrel.windows` NuGet package.
+
+## 中文
+
+### 功能
+- 保存和恢复当前前台窗口。
+- 使用托盘 `Save All` / `Restore All` 保存并恢复整套布局快照。
+- 可选 `Virtual Desktop Restore` 会在 Windows 提供相应支持时，尽量把匹配到的窗口移回保存时的虚拟桌面。
+- `Restore All` 可选择包含最小化窗口。
+- 布局快照的标题匹配对动态标题更稳，像 `Chart #1` 这类编号窗口也能更安全地区分。
+
+### 下载
+- GitHub Releases：<https://github.com/nirvanalinlei/WindowResizer/releases/latest>
+- Microsoft Store：<https://www.microsoft.com/store/apps/9NZ07CQ6WZMB>
+- 已发布程序的运行环境：Windows x64，.NET Framework 4.7.2 及以上。
+
+### 快速开始
+1. 运行 `WindowResizer.exe`。
+2. 使用 `Ctrl+Alt+S` 保存当前前台窗口，使用 `Ctrl+Alt+R` 恢复当前前台窗口。
+3. 在设置窗口中可以修改热键，并开启或关闭 `Resize by title`、`Auto Resize Delay`、`Include Minimized`、`Virtual Desktop Restore`。
+4. 托盘 `Save All` 用于保存当前布局快照，`Restore All` 用于恢复最近一次保存的布局快照。
+5. 便携模式下，把 `WindowResizer.config.json` 放在 `WindowResizer.exe` 同目录即可。
+
+### Restore All 摘要说明
+- `Restored`：成功应用了窗口位置和状态。
+- `Move fallback`：无法把窗口移回保存时的虚拟桌面，但仍会尝试在当前桌面恢复位置和大小。
+- `Unmatched`：没有找到与快照条目匹配的现存窗口。
+- `Failed`：找到了匹配窗口，但 Windows 或目标应用拒绝应用位置变更。
+
+### CLI
+运行 `WindowResizer.CLI.exe resize -h`。
+
+```powershell
+WindowResizer.CLI.exe resize
+WindowResizer.CLI.exe resize -p "notepad.exe"
+WindowResizer.CLI.exe resize -p "notepad.exe" -t "notes" -v
+```
+
+不传 `--process` 时，CLI 只处理当前前台窗口。传入 `--process` 后，`--title` 才会生效，而且它是标题子串过滤，不是正则匹配。
+
+CLI 可以独立运行，不要求托盘程序先启动。
+
+### 构建
+```powershell
+dotnet restore
+dotnet build WindowResizer.sln -c Release
+pwsh .\installer\build.ps1 1.3.3
+pwsh .\installer\build-cli.ps1 1.3.3
+```
+
+发布打包还依赖 `nuget`、`7z`，以及由 `squirrel.windows` NuGet 包还原到本地的 Squirrel 工具。
